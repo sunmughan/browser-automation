@@ -9,6 +9,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:weblibre/core/routing/routes.dart';
+import 'package:weblibre/features/geckoview/domain/providers/selected_tab.dart';
+import 'package:weblibre/features/geckoview/domain/providers/tab_state.dart';
 import 'automation_diagnostics.dart';
 
 class AutomationDebugOverlay extends ConsumerWidget {
@@ -58,14 +60,14 @@ class AutomationDebugOverlay extends ConsumerWidget {
   }
 }
 
-class _AutomationDashboard extends StatefulWidget {
+class _AutomationDashboard extends ConsumerStatefulWidget {
   const _AutomationDashboard();
 
   @override
-  State<_AutomationDashboard> createState() => _AutomationDashboardState();
+  ConsumerState<_AutomationDashboard> createState() => _AutomationDashboardState();
 }
 
-class _AutomationDashboardState extends State<_AutomationDashboard> {
+class _AutomationDashboardState extends ConsumerState<_AutomationDashboard> {
   final TextEditingController _urlController =
       TextEditingController(text: 'https://innovatecg.in/voting');
   bool _busy = false;
@@ -78,32 +80,6 @@ class _AutomationDashboardState extends State<_AutomationDashboard> {
     super.dispose();
   }
 
-  Future<void> _openUrl() async {
-    final raw = _urlController.text.trim();
-    final uri = Uri.tryParse(raw.contains('://') ? raw : 'https://$raw');
-    if (uri == null || !uri.hasAuthority ||
-        !{'http', 'https'}.contains(uri.scheme)) {
-      AutomationDiagnostics.record('Open URL rejected: invalid URL');
-      _message('Enter a valid http/https URL');
-      return;
-    }
-    AutomationDiagnostics.record('Open URL tapped: ${uri.host}');
-    try {
-      if (!mounted) return;
-      final router = GoRouter.of(context);
-      final location = SearchRoute(
-        tabType: TabType.regular,
-        searchText: uri.toString(),
-        autoSubmitSearch: true,
-      ).location;
-      Navigator.of(context).pop();
-      router.go(location);
-      AutomationDiagnostics.record('Browser navigation requested: ${uri.host}');
-    } catch (error, stack) {
-      AutomationDiagnostics.record('Browser navigation failed', error: error, stackTrace: stack);
-      _message('Navigation failed: $error');
-    }
-  }
 
   Future<void> _importCsv() async {
     AutomationDiagnostics.record('CSV import tapped');
@@ -208,6 +184,8 @@ class _AutomationDashboardState extends State<_AutomationDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final selectedTabId = ref.watch(selectedTabProvider);
+    final activeTab = ref.watch(tabStateProvider(selectedTabId));
     final theme = Theme.of(context);
     return DraggableScrollableSheet(
       expand: false,
@@ -233,24 +211,19 @@ class _AutomationDashboardState extends State<_AutomationDashboard> {
               const Chip(label: Text('CI BUILD')),
             ]),
             const SizedBox(height: 16),
-            Text('Open website', style: theme.textTheme.titleMedium),
+            Text('Current page', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
-            TextField(
-              controller: _urlController,
-              keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'https://example.com',
-                prefixIcon: Icon(Icons.link),
-              ),
-              onSubmitted: (_) => _openUrl(),
-            ),
+            if (activeTab == null)
+              const Text('No active browser tab is selected.')
+            else ...[
+              Text(activeTab.title.isEmpty ? 'Untitled page' : activeTab.title,
+                style: theme.textTheme.bodyLarge),
+              const SizedBox(height: 4),
+              SelectableText(activeTab.url.toString(),
+                style: theme.textTheme.bodySmall),
+            ],
             const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: _busy ? null : _openUrl,
-              icon: const Icon(Icons.open_in_browser),
-              label: const Text('Open in browser'),
-            ),
+            const Text('This panel stays attached to the current browser page. DOM/form inspection is not connected yet; no page navigation or form submission is performed.'),
             const Divider(height: 28),
             Text('CSV structure check', style: theme.textTheme.titleMedium),
             const SizedBox(height: 6),

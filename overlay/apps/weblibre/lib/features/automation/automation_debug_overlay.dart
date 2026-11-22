@@ -6,18 +6,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:weblibre/core/providers/router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:weblibre/core/routing/routes.dart';
 import 'automation_diagnostics.dart';
 
-class AutomationDebugOverlay extends StatelessWidget {
+class AutomationDebugOverlay extends ConsumerWidget {
   final Widget child;
   const AutomationDebugOverlay({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (!kDebugMode) return child;
+    final router = ref.watch(routerProvider.select((value) => value.value));
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -30,9 +33,14 @@ class AutomationDebugOverlay extends StatelessWidget {
               heroTag: 'browser-automation-debug',
               tooltip: 'Automation diagnostics',
               onPressed: () {
-                AutomationDiagnostics.record('Dashboard opened');
+                AutomationDiagnostics.record('Dashboard button tapped');
+                final navigatorContext = router?.routerDelegate.navigatorKey.currentContext;
+                if (navigatorContext == null) {
+                  AutomationDiagnostics.record('Dashboard open failed: navigator context unavailable');
+                  return;
+                }
                 showModalBottomSheet<void>(
-                  context: context,
+                  context: navigatorContext,
                   isScrollControlled: true,
                   useSafeArea: true,
                   builder: (_) => const _AutomationDashboard(),

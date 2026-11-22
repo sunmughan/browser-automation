@@ -1,4 +1,4 @@
-name: Android Debug APK
+name: Android Release APK
 
 on:
   push:
@@ -11,12 +11,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-debug-${{ github.ref }}
+  group: android-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-debug:
-    name: Build WebLibre-based Android debug APK
+    name: Build WebLibre-based Android release APK
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -120,11 +120,24 @@ jobs:
           IPTPROXY_SOURCE: ${{ runner.temp }}/IPtProxy
         run: melos run build-go-runtime --no-select
 
-      - name: Build arm64 debug APK
-        working-directory: upstream/apps/weblibre
-        run: flutter build apk --debug --flavor githubAlpha --target-platform android-arm64 --no-tree-shake-icons
+      - name: Create CI-only signing key
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/android-signing"
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/android-signing/ci-debug.keystore" \
+            -storepass android -keypass android \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=CI,C=US"
+          echo "KEY_PATH=$RUNNER_TEMP/android-signing/ci-debug.keystore" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=androiddebugkey" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=android" >> "$GITHUB_ENV"
 
-      - name: Collect debug APK and build diagnostics
+      - name: Build arm64 release APK
+        working-directory: upstream/apps/weblibre
+        run: flutter build apk --release --flavor githubAlpha --target-platform android-arm64 --no-tree-shake-icons
+
+      - name: Collect release APK and build diagnostics
         if: always()
         run: |
           set -euo pipefail
@@ -158,12 +171,12 @@ jobs:
             find upstream/apps/weblibre/build -type f \( -name '*.log' -o -name '*.txt' \) -size -5M -print | head -100 > dist/build-log-index.txt || true
           fi
 
-      - name: Upload debug APK and build diagnostics
+      - name: Upload release APK and build diagnostics
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: browser-automation-debug-apk
+          name: browser-automation-release-apk
           path: dist/
           if-no-files-found: warn
           retention-days: 14

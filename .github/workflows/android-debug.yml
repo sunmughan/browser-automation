@@ -1,0 +1,141 @@
+name: Android Debug APK
+
+on:
+  push:
+    branches:
+      - main
+      - implementation/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-debug:
+    name: Build WebLibre-based Android debug APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout automation overlay repository
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned WebLibre upstream
+        run: |
+          set -euo pipefail
+          git clone https://github.com/FaFre/WebLibre.git upstream
+          git -C upstream fetch --no-tags origin 8e802b6cb4804e41d081ec42b3c513bd10875844
+          git -C upstream checkout --detach 8e802b6cb4804e41d081ec42b3c513bd10875844
+          echo "UPSTREAM_SHA=$(git -C upstream rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Apply debug overlay
+        run: |
+          set -euo pipefail
+          cp -R overlay/apps/weblibre/lib/features/automation upstream/apps/weblibre/lib/features/
+          python3 scripts/apply_overlay.py
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          df -h /
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.4'
+          cache: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.8
+          cache: false
+
+      - name: Install Android NDK
+        working-directory: upstream
+        run: |
+          set -euo pipefail
+          NDK_VERSION="$(sed -n 's/^weblibre\.ndkVersion[[:space:]]*=[[:space:]]*//p' apps/weblibre/android/gradle.properties)"
+          test -n "$NDK_VERSION"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Bootstrap Flutter workspace
+        working-directory: upstream
+        run: |
+          set -euo pipefail
+          dart pub global activate melos 7.8.1
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          melos bootstrap
+
+      - name: Build browser components
+        working-directory: upstream
+        run: melos run build-components --no-select
+
+      - name: Checkout pinned native runtime sources
+        working-directory: upstream
+        run: |
+          set -euo pipefail
+          source native/go_mobile_runtime/pins.env
+          git clone https://github.com/SagerNet/sing-box.git "$RUNNER_TEMP/sing-box"
+          git -C "$RUNNER_TEMP/sing-box" checkout "$SING_BOX_TAG"
+          test "$(git -C "$RUNNER_TEMP/sing-box" rev-parse HEAD)" = "$SING_BOX_COMMIT"
+          git clone https://github.com/tladesignz/IPtProxy.git "$RUNNER_TEMP/IPtProxy"
+          git -C "$RUNNER_TEMP/IPtProxy" checkout "$IPTPROXY_TAG"
+          test "$(git -C "$RUNNER_TEMP/IPtProxy" rev-parse HEAD)" = "$IPTPROXY_COMMIT"
+          git -C "$RUNNER_TEMP/IPtProxy" submodule update --init dnstt
+
+      - name: Build native Android runtime
+        working-directory: upstream
+        env:
+          SING_BOX_SOURCE: ${{ runner.temp }}/sing-box
+          IPTPROXY_SOURCE: ${{ runner.temp }}/IPtProxy
+        run: melos run build-go-runtime --no-select
+
+      - name: Build arm64 debug APK
+        working-directory: upstream/apps/weblibre
+        run: flutter build apk --debug --flavor githubAlpha --target-platform android-arm64 --no-tree-shake-icons
+
+      - name: Collect debug APK and build diagnostics
+        if: always()
+        run: |
+          mkdir -p dist
+          find upstream/apps/weblibre/build/app/outputs -type f -name '*.apk' -print -exec cp {} dist/ \; || true
+          {
+            echo "Automation repository commit: $GITHUB_SHA"
+            echo "WebLibre upstream commit: ${UPSTREAM_SHA:-unknown}"
+            echo "Runner: $RUNNER_OS"
+            echo "Flutter: $(flutter --version 2>&1 | head -1 || true)"
+            echo "APK files:"
+            find dist -maxdepth 1 -type f -printf '%f (%s bytes)\n' || true
+          } > dist/build-info.txt
+          if [ -d upstream/apps/weblibre/build ]; then
+            find upstream/apps/weblibre/build -type f \( -name '*.log' -o -name '*.txt' \) -size -5M -print | head -100 > dist/build-log-index.txt || true
+          fi
+
+      - name: Upload debug APK and build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-automation-debug-apk
+          path: dist/
+          if-no-files-found: warn
+          retention-days: 14

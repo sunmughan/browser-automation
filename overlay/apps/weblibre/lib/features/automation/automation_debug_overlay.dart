@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:weblibre/core/routing/routes.dart';
 import 'package:weblibre/features/geckoview/domain/providers/selected_tab.dart';
 import 'package:weblibre/features/geckoview/domain/providers/tab_state.dart';
 import 'automation_diagnostics.dart';
@@ -68,17 +67,9 @@ class _AutomationDashboard extends ConsumerStatefulWidget {
 }
 
 class _AutomationDashboardState extends ConsumerState<_AutomationDashboard> {
-  final TextEditingController _urlController =
-      TextEditingController(text: 'https://innovatecg.in/voting');
   bool _busy = false;
   String _csvSummary = 'No CSV imported';
   int? _csvRows;
-
-  @override
-  void dispose() {
-    _urlController.dispose();
-    super.dispose();
-  }
 
 
   Future<void> _importCsv() async {

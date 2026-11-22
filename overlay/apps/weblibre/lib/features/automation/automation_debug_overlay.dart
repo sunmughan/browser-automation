@@ -24,12 +24,17 @@ class AutomationDebugOverlay extends ConsumerWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        child,
+        // Keep browser/GeckoView content in its own raster layer so the
+        // diagnostics FAB and its transient animations do not invalidate the
+        // full browser surface on every frame.
+        RepaintBoundary(child: child),
         Positioned(
+
           right: 14,
           bottom: 92,
           child: SafeArea(
-            child: FloatingActionButton.small(
+            child: RepaintBoundary(
+              child: FloatingActionButton.small(
               heroTag: 'browser-automation-debug',
               tooltip: 'Automation diagnostics',
               onPressed: () {
@@ -46,7 +51,8 @@ class AutomationDebugOverlay extends ConsumerWidget {
                   builder: (_) => const _AutomationDashboard(),
                 );
               },
-              child: const Icon(Icons.bug_report_outlined),
+                child: const Icon(Icons.bug_report_outlined),
+              ),
             ),
           ),
         ),

@@ -55,4 +55,20 @@ replace_once(
     "    return true;\n"
     "  };",
 )
+# Android's wallpaper-derived dynamic palette can produce an unreadable red
+# surface on some devices. Use WebLibre's own stable teal fallback palette for
+# this build while preserving light/dark mode and pure-black behavior.
+replace_once(
+    main_dart,
+    "        if (pureBlack) {",
+    "        lightColorScheme = ColorScheme.fromSeed(\n"
+    "          seedColor: ref.read(lightSeedColorFallbackProvider),\n"
+    "        );\n"
+    "        darkColorScheme = ColorScheme.fromSeed(\n"
+    "          seedColor: ref.read(darkSeedColorFallbackProvider),\n"
+    "          brightness: Brightness.dark,\n"
+    "        );\n"
+    "        if (pureBlack) {",
+)
+
 print("Applied Browser Automation debug overlay and global error capture.")

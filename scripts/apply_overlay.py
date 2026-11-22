@@ -66,10 +66,10 @@ replace_once(
     main_dart,
     "        if (pureBlack) {",
     "        lightColorScheme = ColorScheme.fromSeed(\n"
-    "          seedColor: ref.read(lightSeedColorFallbackProvider),\n"
+    "          seedColor: const Color(0xFF2E7D32),\n"
     "        );\n"
     "        darkColorScheme = ColorScheme.fromSeed(\n"
-    "          seedColor: ref.read(darkSeedColorFallbackProvider),\n"
+    "          seedColor: const Color(0xFF2E7D32),\n"
     "          brightness: Brightness.dark,\n"
     "        );\n"
     "        if (pureBlack) {",

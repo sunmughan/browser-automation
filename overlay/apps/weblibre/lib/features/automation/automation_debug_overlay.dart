@@ -5,9 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:weblibre/core/providers/router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:weblibre/core/routing/routes.dart';
@@ -21,7 +19,6 @@ class AutomationDebugOverlay extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     const automationEnabled = bool.fromEnvironment('BROWSER_AUTOMATION_ENABLED', defaultValue: false);
     if (!kDebugMode && !automationEnabled) return child;
-    final router = ref.watch(routerProvider.select((value) => value.value));
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -40,13 +37,11 @@ class AutomationDebugOverlay extends ConsumerWidget {
               tooltip: 'Automation',
               onPressed: () {
                 AutomationDiagnostics.record('Dashboard button tapped');
-                final navigatorContext = router?.routerDelegate.navigatorKey.currentContext;
-                if (navigatorContext == null) {
-                  AutomationDiagnostics.record('Dashboard open failed: navigator context unavailable');
-                  return;
-                }
+                // Use this overlay's current browser-page context. Resolving the
+                // router's root navigator context here can attach the sheet to the
+                // wrong route and make the tap appear to leave the active page.
                 showModalBottomSheet<void>(
-                  context: navigatorContext,
+                  context: context,
                   isScrollControlled: true,
                   useSafeArea: true,
                   builder: (_) => const _AutomationDashboard(),

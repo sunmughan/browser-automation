@@ -135,7 +135,7 @@ jobs:
 
       - name: Build arm64 release APK
         working-directory: upstream/apps/weblibre
-        run: flutter build apk --release --flavor githubAlpha --target-platform android-arm64 --no-tree-shake-icons
+        run: flutter build apk --release --flavor githubAlpha --target-platform android-arm64 --no-tree-shake-icons --dart-define=BROWSER_AUTOMATION_ENABLED=true
 
       - name: Collect release APK and build diagnostics
         if: always()

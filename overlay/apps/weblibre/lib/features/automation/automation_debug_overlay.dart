@@ -79,12 +79,14 @@ class _AutomationDashboardState extends State<_AutomationDashboard> {
     AutomationDiagnostics.record('Open URL tapped: ${uri.host}');
     try {
       if (!mounted) return;
-      context.pop();
-      context.go(SearchRoute(
+      final router = GoRouter.of(context);
+      final location = SearchRoute(
         tabType: TabType.regular,
         searchText: uri.toString(),
         autoSubmitSearch: true,
-      ).location);
+      ).location;
+      Navigator.of(context).pop();
+      router.go(location);
       AutomationDiagnostics.record('Browser navigation requested: ${uri.host}');
     } catch (error, stack) {
       AutomationDiagnostics.record('Browser navigation failed', error: error, stackTrace: stack);

@@ -19,7 +19,8 @@ class AutomationDebugOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!kDebugMode) return child;
+    const automationEnabled = bool.fromEnvironment('BROWSER_AUTOMATION_ENABLED', defaultValue: false);
+    if (!kDebugMode && !automationEnabled) return child;
     final router = ref.watch(routerProvider.select((value) => value.value));
     return Stack(
       fit: StackFit.expand,
@@ -34,9 +35,9 @@ class AutomationDebugOverlay extends ConsumerWidget {
           bottom: 92,
           child: SafeArea(
             child: RepaintBoundary(
-              child: FloatingActionButton.small(
+              child: FloatingActionButton.extended(
               heroTag: 'browser-automation-debug',
-              tooltip: 'Automation diagnostics',
+              tooltip: 'Automation',
               onPressed: () {
                 AutomationDiagnostics.record('Dashboard button tapped');
                 final navigatorContext = router?.routerDelegate.navigatorKey.currentContext;
@@ -51,7 +52,8 @@ class AutomationDebugOverlay extends ConsumerWidget {
                   builder: (_) => const _AutomationDashboard(),
                 );
               },
-                child: const Icon(Icons.bug_report_outlined),
+                icon: const Icon(Icons.smart_toy_outlined),
+                label: const Text('Automation'),
               ),
             ),
           ),
@@ -231,9 +233,9 @@ class _AutomationDashboardState extends State<_AutomationDashboard> {
             Row(children: [
               const Icon(Icons.bug_report_outlined),
               const SizedBox(width: 10),
-              Expanded(child: Text('Browser Automation • Debug',
+              Expanded(child: Text('Browser Automation',
                 style: theme.textTheme.titleLarge)),
-              const Chip(label: Text('DEBUG')),
+              const Chip(label: Text('CI BUILD')),
             ]),
             const SizedBox(height: 16),
             Text('Open website', style: theme.textTheme.titleMedium),

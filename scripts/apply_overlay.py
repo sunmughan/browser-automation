@@ -13,7 +13,7 @@ def replace_once(path: Path, old: str, new: str):
         raise SystemExit(f"Expected exactly one patch anchor in {path}, found {count}: {old!r}")
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
-# The diagnostics overlay is attached only to the debug build's router child.
+# Attach the diagnostics overlay to the router child in debug builds only.
 replace_once(
     main_app,
     "import 'package:weblibre/presentation/utils/app_initialization_l10n.dart';",
@@ -30,14 +30,18 @@ replace_once(
     "                        ),",
 )
 
-# Preserve WebLibre's existing handlers while duplicating each failure into our
-# bounded in-memory diagnostic log for easy copy/export from the overlay.
+# Preserve upstream error handlers and mirror errors into bounded diagnostics.
 replace_once(
     main_dart,
     "import 'package:weblibre/core/logger.dart';",
     "import 'package:weblibre/core/logger.dart';\n"
     "import 'package:weblibre/features/automation/automation_diagnostics.dart';",
-    "import 'package:weblibre/features/automation/automation_performance_monitor.dart'",
+)
+replace_once(
+    main_dart,
+    "import 'package:weblibre/features/automation/automation_diagnostics.dart';",
+    "import 'package:weblibre/features/automation/automation_diagnostics.dart';\n"
+    "import 'package:weblibre/features/automation/automation_performance_monitor.dart';",
 )
 replace_once(
     main_dart,
@@ -56,9 +60,8 @@ replace_once(
     "    return true;\n"
     "  };",
 )
-# Android's wallpaper-derived dynamic palette can produce an unreadable red
-# surface on some devices. Use WebLibre's own stable teal fallback palette for
-# this build while preserving light/dark mode and pure-black behavior.
+
+# Always use the upstream brand palette instead of Android wallpaper colors.
 replace_once(
     main_dart,
     "        if (pureBlack) {",
@@ -72,16 +75,15 @@ replace_once(
     "        if (pureBlack) {",
 )
 
-
-# Start the low-overhead frame sampler after Flutter binding initialization.
+# Start low-overhead frame sampling after Flutter binding initialization.
 replace_once(
     main_dart,
     "  WidgetsFlutterBinding.ensureInitialized();",
-    "  WidgetsFlutterBinding.ensureInitialized();\\n  AutomationPerformanceMonitor.start();",
+    "  WidgetsFlutterBinding.ensureInitialized();\n  AutomationPerformanceMonitor.start();",
 )
 
-# Verbose Gecko debug tracing is expensive on a debug build and can flood logcat.
-# Keep warnings/errors while avoiding per-operation debug trace overhead.
+# Verbose Gecko debug tracing adds substantial log and CPU overhead on debug.
+# Preserve warnings and errors while disabling per-operation debug tracing.
 replace_once(
     main_dart,
     "          kDebugMode ? LogLevel.debug : LogLevel.warn,",

@@ -72,7 +72,14 @@ jobs:
           set -euo pipefail
           NDK_VERSION="$(sed -n 's/^weblibre\.ndkVersion[[:space:]]*=[[:space:]]*//p' apps/weblibre/android/gradle.properties)"
           test -n "$NDK_VERSION"
+          set +e
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+          SDKMANAGER_STATUS=${PIPESTATUS[1]}
+          set -e
+          if [ "$SDKMANAGER_STATUS" -ne 0 ]; then
+            echo "::error::Android NDK installation failed with sdkmanager exit code $SDKMANAGER_STATUS"
+            exit "$SDKMANAGER_STATUS"
+          fi
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"

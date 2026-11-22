@@ -92,6 +92,10 @@ jobs:
           echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
           melos bootstrap
 
+      - name: Download and generate upstream browser assets
+        working-directory: upstream
+        run: melos run update-assets --no-select
+
       - name: Build browser components
         working-directory: upstream
         run: melos run build-components --no-select

@@ -130,6 +130,42 @@ jobs:
           mkdir -p dist
           find upstream/apps/weblibre/build/app/outputs -type f -name '*.apk' -print -exec cp {} dist/ \; || true
           {
+            echo "=== APK FILE SIZES ==="
+            find dist -maxdepth 1 -type f -name '*.apk' -printf '%s %p\\n' | sort -nr
+            for apk in dist/*.apk; do
+              [ -f "$apk" ] || continue
+              echo
+              echo "=== LARGEST APK ENTRIES: $(basename "$apk") ==="
+              unzip -l "$apk" | sort -nr | head -45 || true
+              echo
+              echo "=== APK TOP-LEVEL CONTENT COUNTS ==="
+              unzip -Z1 "$apk" | awk -F/ 'NF > 1 { group=$1 } { count[group]++ } END { for (group in count) print count[group], group }' | sort -nr | head -30
+              echo
+              echo "=== ARM64 NATIVE LIBRARIES ==="
+              unzip -l "$apk" | grep -E 'lib/arm64-v8a/.*\\.so
+            echo "WebLibre upstream commit: ${UPSTREAM_SHA:-unknown}"
+            echo "Runner: $RUNNER_OS"
+            echo "Flutter: $(flutter --version 2>&1 | head -1 || true)"
+            echo "APK files:"
+            find dist -maxdepth 1 -type f -printf '%f (%s bytes)\n' || true
+          } > dist/build-info.txt
+          if [ -d upstream/apps/weblibre/build ]; then
+            find upstream/apps/weblibre/build -type f \( -name '*.log' -o -name '*.txt' \) -size -5M -print | head -100 > dist/build-log-index.txt || true
+          fi
+
+      - name: Upload debug APK and build diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-automation-debug-apk
+          path: dist/
+          if-no-files-found: warn
+          retention-days: 14
+ | sort -nr | head -40 || true
+            done
+          } > dist/apk-size-report.txt 2>&1
+          {
             echo "Automation repository commit: $GITHUB_SHA"
             echo "WebLibre upstream commit: ${UPSTREAM_SHA:-unknown}"
             echo "Runner: $RUNNER_OS"

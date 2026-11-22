@@ -22,11 +22,11 @@ replace_once(
 )
 replace_once(
     main_app,
-    "child: _StrictContainerBlockListener(\\n"
-    "                          child: child ?? const SizedBox.shrink(),\\n"
+    "child: _StrictContainerBlockListener(\n"
+    "                          child: child ?? const SizedBox.shrink(),\n"
     "                        ),",
-    "child: _StrictContainerBlockListener(\\n"
-    "                          child: AutomationDebugOverlay(child: child ?? const SizedBox.shrink()),\\n"
+    "child: _StrictContainerBlockListener(\n"
+    "                          child: AutomationDebugOverlay(child: child ?? const SizedBox.shrink()),\n"
     "                        ),",
 )
 

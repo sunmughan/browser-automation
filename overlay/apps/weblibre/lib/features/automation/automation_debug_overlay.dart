@@ -106,18 +106,16 @@ class _AutomationDashboardState extends State<_AutomationDashboard> {
     AutomationDiagnostics.record('CSV import tapped');
     setState(() => _busy = true);
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final files = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: const ['csv'],
-        withData: true,
       );
-      if (result == null || result.files.isEmpty) {
+      if (files.isEmpty) {
         AutomationDiagnostics.record('CSV import cancelled');
         return;
       }
-      final file = result.files.single;
-      final bytes = file.bytes;
-      if (bytes == null) throw StateError('Picker did not return file bytes');
+      final file = files.single;
+      final bytes = await file.readAsBytes();
       final text = utf8.decode(bytes, allowMalformed: false);
       final rows = _parseCsv(text);
       if (rows.isEmpty) throw const FormatException('CSV is empty');

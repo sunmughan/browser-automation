@@ -22,8 +22,12 @@ replace_once(
 )
 replace_once(
     main_app,
-    "child: child ?? const SizedBox.shrink(),",
-    "child: AutomationDebugOverlay(child: child ?? const SizedBox.shrink()),",
+    "child: _StrictContainerBlockListener(\\n"
+    "                          child: child ?? const SizedBox.shrink(),\\n"
+    "                        ),",
+    "child: _StrictContainerBlockListener(\\n"
+    "                          child: AutomationDebugOverlay(child: child ?? const SizedBox.shrink()),\\n"
+    "                        ),",
 )
 
 # Preserve WebLibre's existing handlers while duplicating each failure into our

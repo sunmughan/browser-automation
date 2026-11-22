@@ -37,6 +37,7 @@ replace_once(
     "import 'package:weblibre/core/logger.dart';",
     "import 'package:weblibre/core/logger.dart';\n"
     "import 'package:weblibre/features/automation/automation_diagnostics.dart';",
+    "import 'package:weblibre/features/automation/automation_performance_monitor.dart'",
 )
 replace_once(
     main_dart,
@@ -69,6 +70,22 @@ replace_once(
     "          brightness: Brightness.dark,\n"
     "        );\n"
     "        if (pureBlack) {",
+)
+
+
+# Start the low-overhead frame sampler after Flutter binding initialization.
+replace_once(
+    main_dart,
+    "  WidgetsFlutterBinding.ensureInitialized();",
+    "  WidgetsFlutterBinding.ensureInitialized();\\n  AutomationPerformanceMonitor.start();",
+)
+
+# Verbose Gecko debug tracing is expensive on a debug build and can flood logcat.
+# Keep warnings/errors while avoiding per-operation debug trace overhead.
+replace_once(
+    main_dart,
+    "          kDebugMode ? LogLevel.debug : LogLevel.warn,",
+    "          LogLevel.warn,",
 )
 
 print("Applied Browser Automation debug overlay and global error capture.")
